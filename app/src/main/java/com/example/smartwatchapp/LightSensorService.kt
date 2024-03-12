@@ -13,6 +13,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
 import android.os.Build
+import android.os.CountDownTimer
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -24,9 +25,12 @@ import com.google.android.gms.location.Priority
 class LightSensorService : Service(), SensorEventListener {
 
     private var check: Boolean = false
+    private var checkLimit: Boolean = false
     private lateinit var sensorManager: SensorManager
     private lateinit var fusedLocation: FusedLocationProviderClient
     private var lightSensor: Sensor? = null
+    private var sunCheck: Int = 0
+    private var darkCheck: Int = 0
 
     //Variaveis para mandar para o celulebas
     private var lightLevel: Float = 0.0f
@@ -45,13 +49,40 @@ class LightSensorService : Service(), SensorEventListener {
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
-            // aqui onde recebe o valor da luz do ambiente
-            lightLevel = event.values[0]
-            if (lightLevel > 100)
-                if (!check) {
-                    obterLoca()
+        if (!check) {
+            if (event?.sensor?.type == Sensor.TYPE_LIGHT) {
+                // aqui onde recebe o valor da luz do ambiente
+                lightLevel = event.values[0]
+                if (!checkLimit) {
+                    if (lightLevel > 100) {
+                        if (!check) {
+                            sunCheck++
+                            check = true
+                            timerSunCheck.start()
+                        }
+                    } else {
+                        if (!check) {
+                            darkCheck++
+                            check = true
+                            timerSunCheck.start()
+                        }
+                    }
+                } else if (checkLimit) {
+                    if (lightLevel > 100) {
+                        if (!check) {
+                            sunCheck++
+                            check = true
+                            timerSunCheck.start()
+                        }
+                    } else {
+                        if (!check) {
+                            darkCheck++
+                            check = true
+                            timerSunCheck.start()
+                        }
+                    }
                 }
+            }
         }
     }
 
@@ -64,7 +95,7 @@ class LightSensorService : Service(), SensorEventListener {
     }
 
     @SuppressLint("MissingPermission")
-    private fun emitNotification(text: String) {
+    private fun showNotify(text: String) {
         val channelId = "sensor_light_channel"
         val notificationId = 1
 
@@ -106,10 +137,9 @@ class LightSensorService : Service(), SensorEventListener {
         }
     }
 
-
     // aqui onde o local recebe o valor pra mandar pro celulebas
     @SuppressLint("MissingPermission")
-    fun obterLoca() {
+    fun getLocal() {
         fusedLocation = LocationServices.getFusedLocationProviderClient(this)
 
         fusedLocation.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
@@ -118,12 +148,50 @@ class LightSensorService : Service(), SensorEventListener {
                     var latitude = location.latitude
                     var longitude = location.longitude
                     var accuracy = location.accuracy
-                    local = "Latitude: $latitude\nLongitude: $longitude\nPrecisão: $accuracy"
-                    emitNotification(local)
+                    local =
+                        "Latitude: $latitude\nLongitude: $longitude\nPrecisão: $accuracy\n Luz: $lightLevel"
+                    showNotify(local)
                 } else {
                     local = "deu ruim"
-                    emitNotification(local)
+                    showNotify(local)
                 }
             }
+    }
+
+    private var timerSunCheck = object : CountDownTimer(10000, 1000) {
+        override fun onTick(millisUntilFinished: Long) {
+        }
+
+        override fun onFinish() {
+            check = false
+            if (sunCheck > 4) {
+                darkCheck = 0
+                sunCheck = 0
+                if (!checkLimit) {
+                    checkLimit = true
+                    getLocal()
+                    showNotify("start limit")
+                    timerSunLimit.start()
+                }
+            } else if (darkCheck > 4) {
+                darkCheck = 0
+                sunCheck = 0
+                checkLimit = false
+                showNotify("você não está mais no sol")
+                timerSunLimit.cancel()
+            }
+        }
+    }
+
+    private var timerSunLimit = object : CountDownTimer(20000, 1000) {
+        override fun onTick(millisUntilFinished: Long) {
+        }
+
+        override fun onFinish() {
+            darkCheck = 0
+            sunCheck = 0
+            checkLimit = false
+            showNotify("atingiu seu limite solar")
+        }
     }
 }
