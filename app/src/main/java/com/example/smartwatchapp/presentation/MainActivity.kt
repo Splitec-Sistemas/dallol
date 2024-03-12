@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
         button.setOnClickListener {
             getLocation()
         }
+
     }
 
     //Inicia o serviço em segundo plano do sensor de luz
