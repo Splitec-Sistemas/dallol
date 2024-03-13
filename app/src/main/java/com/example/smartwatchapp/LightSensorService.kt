@@ -21,6 +21,8 @@ import com.example.smartwatchapp.presentation.MainActivity
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.gms.wearable.PutDataMapRequest
+import com.google.android.gms.wearable.Wearable
 
 class LightSensorService : Service(), SensorEventListener {
 
@@ -59,12 +61,16 @@ class LightSensorService : Service(), SensorEventListener {
                             sunCheck++
                             check = true
                             timerSunCheck.start()
+                            val text = "sol $sunCheck"
+                            showNotifyLog(text)
                         }
                     } else {
                         if (!check) {
                             darkCheck++
                             check = true
                             timerSunCheck.start()
+                            val text = "dark $darkCheck"
+                            showNotifyLog(text)
                         }
                     }
                 } else if (checkLimit) {
@@ -73,12 +79,16 @@ class LightSensorService : Service(), SensorEventListener {
                             sunCheck++
                             check = true
                             timerSunCheck.start()
+                            val text = "sol $sunCheck"
+                            showNotifyLog(text)
                         }
                     } else {
                         if (!check) {
                             darkCheck++
                             check = true
                             timerSunCheck.start()
+                            val text = "dark $darkCheck"
+                            showNotifyLog(text)
                         }
                     }
                 }
@@ -128,9 +138,52 @@ class LightSensorService : Service(), SensorEventListener {
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("luz elevada")
             .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
+            .setVibrate(longArrayOf(0, 1000, 1000, 1000))
+
+        with(NotificationManagerCompat.from(this)) {
+            notify(notificationId, builder.build())
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun showNotifyLog(text: String) {
+        val channelId = "log_notify"
+        val notificationId = 3
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "log test"
+            val descriptionText = "Notificação de texte"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+
+            val channel = NotificationChannel(channelId, name, importance).apply {
+                description = descriptionText
+            }
+
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE)
+                        as NotificationManager
+
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("log test")
+            .setContentText(text)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setVibrate(longArrayOf(0, 1000, 1000, 1000))
 
         with(NotificationManagerCompat.from(this)) {
             notify(notificationId, builder.build())
@@ -150,7 +203,7 @@ class LightSensorService : Service(), SensorEventListener {
                     var accuracy = location.accuracy
                     local =
                         "Latitude: $latitude\nLongitude: $longitude\nPrecisão: $accuracy\n Luz: $lightLevel"
-                    showNotify(local)
+                    enviarDadosParaCelular(local)
                 } else {
                     local = "deu ruim"
                     showNotify(local)
@@ -170,7 +223,6 @@ class LightSensorService : Service(), SensorEventListener {
                 if (!checkLimit) {
                     checkLimit = true
                     getLocal()
-                    showNotify("start limit")
                     timerSunLimit.start()
                 }
             } else if (darkCheck > 4) {
@@ -193,5 +245,14 @@ class LightSensorService : Service(), SensorEventListener {
             checkLimit = false
             showNotify("atingiu seu limite solar")
         }
+    }
+
+    // Função para enviar dados
+    fun enviarDadosParaCelular(dado: String) {
+        val request = PutDataMapRequest.create("/dados") // Path para identificar o tipo de dados
+        val dataMap = request.dataMap
+        dataMap.putString("chave_dado", dado)
+
+        Wearable.getDataClient(this).putDataItem(request.asPutDataRequest())
     }
 }
