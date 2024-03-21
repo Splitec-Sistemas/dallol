@@ -8,7 +8,6 @@ package com.example.smartwatchapp.presentation
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.TextView
 import androidx.activity.ComponentActivity
 import com.example.smartwatchapp.LightSensorService
 import com.example.smartwatchapp.PermissionManager
