@@ -12,9 +12,7 @@ class PermissionManager(private val context: Context) {
         ActivityCompat.requestPermissions(
             context as MainActivity, // Assuming MainActivity is your activity
             arrayOf(
-                Manifest.permission.POST_NOTIFICATIONS,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                Manifest.permission.POST_NOTIFICATIONS
             ),
             1
         )
@@ -23,12 +21,6 @@ class PermissionManager(private val context: Context) {
     fun checkPermissions() {
         if (ActivityCompat.checkSelfPermission(
                 context, Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED ||
-            ActivityCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED ||
-            ActivityCompat.checkSelfPermission(
-                context, Manifest.permission.ACCESS_BACKGROUND_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         )
             requestPermissions()
